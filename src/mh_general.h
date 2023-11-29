@@ -1,35 +1,14 @@
 #include <cmath>
 #include <iostream>
+#include <chrono>
+#include <tuple>
 #include <boost/math/distributions.hpp>
 #include <boost/random.hpp>
 #include <vector>
 #include <omp.h>
-#include "RcppEigen.h"
-#include "Rcpp.h"
-#include "Rcpp/Benchmark/Timer.h"
 
 #include "target.h"
 
-/*
-TODO    
-let the user input a covariance matrix and a scale factor. If they dont input a covariacne matrix then take the identity as default
-dont use std::vector isntead use a matrix
-so remove any rcpp dependencies from the core c++ code. the use should only have to adda wrapper in interface.h
-which would take your function as a parameter and return everything the way its supposed to be
-in the end the user should only need to change target.cpp and interface.cpp.
-
-
-*/
-// [[Rcpp::plugins(openmp)]]
-
-
-/*
-Input : 
-    1) current_state: vector of current state of the sample in a metropolis chain
-    2) random_vector: random vector of eq. distributed standard normal
-Ouput :
-    vector of new proposals
-*/
 Eigen::VectorXd generate_proposal(Eigen::VectorXd current_state, Eigen::VectorXd random_vector){
     return current_state + random_vector;
 }
@@ -53,9 +32,8 @@ Eigen::VectorXd generate_random_vector(RNG& rng, int dim, Eigen::MatrixXd covar)
 
 
 template<class RNG>
-Eigen::VectorXd mh_step(RNG& rng, Eigen::VectorXd current_state, double* proposal_accepted_cnt, double scale_factor_of_proposal){
-    Eigen::MatrixXd covar = scale_factor_of_proposal * Eigen::MatrixXd::Identity(current_state.size(),current_state.size());
-    Eigen::VectorXd random_vector = generate_random_vector(rng, current_state.size(), covar);
+Eigen::VectorXd mh_step(RNG& rng, Eigen::VectorXd current_state, double* proposal_accepted_cnt, Eigen::MatrixXd covar_matrix){
+    Eigen::VectorXd random_vector = generate_random_vector(rng, current_state.size(), covar_matrix);
     Eigen::VectorXd proposed_state = generate_proposal(current_state, random_vector);
 
     double acceptance_ratio = std::min(double(1.0), std::exp(target(proposed_state) - target(current_state)));
@@ -71,30 +49,25 @@ Eigen::VectorXd mh_step(RNG& rng, Eigen::VectorXd current_state, double* proposa
 }
 
 
-/*
-Input : 
-    1) num_chains : number of chains to be run in the metropolis algorithm
-    2) initial_states: a vector of vectors of intial states. Shape: num_chains X size of each initial state
-    3) num_steps : number of steps each chain should take during the metropolis algorithm
-    4) seed: seed used to initialize
-    5) n_cores : number of cores
-    6) target_ll : a Rcpp functional type to calculate the log likelihood of our target distribution
-*/
-Rcpp::List metropolis_hastings (int num_chains,
-                                std::vector<Eigen::VectorXd> initial_states,
+std::tuple<std::vector<Eigen::MatrixXd>,Eigen::VectorXd,int> metropolis_hastings (int num_chains,
+                                Eigen::MatrixXd initial_states,
                                 int num_steps,
                                 int seed,
                                 int n_cores,
-                                double scale_factor_of_proposal
+                                double scale_factor_of_proposal = 1,
+                                Eigen::MatrixXd covar = Eigen::MatrixXd::Identity(1,1)
                                 )
 
-{
-    Rcpp::Timer timer;
-    timer.step("Overall Start");
-
-    Rcpp::Rcout << "scale_factor_of_proposal: " << scale_factor_of_proposal << std::endl;
-    Rcpp::List out(3);
-    out.names() = Rcpp::CharacterVector::create("particles","accepted_counts","timer");
+{   
+    Eigen::MatrixXd covar_matrix;
+    if(covar.rows() == 1 && covar.cols() == 1){
+        covar_matrix = scale_factor_of_proposal * Eigen::MatrixXd::Identity(initial_states.rows(), initial_states.rows());
+    }
+    else {
+        covar_matrix = scale_factor_of_proposal * covar;
+    }
+    
+    auto start = std::chrono::high_resolution_clock::now();
 
     if (n_cores > 0) {
       omp_set_num_threads(n_cores);
@@ -104,27 +77,25 @@ Rcpp::List metropolis_hastings (int num_chains,
 
     // num_chains * (length of each state vector * num_steps) 
     std::vector<Eigen::MatrixXd> final_states(num_chains);
-    std::vector<double> accepted_count(num_chains,0.0);
+    Eigen::VectorXd accepted_count = Eigen::VectorXd::Zero(num_chains);
     
     #pragma omp parallel for 
     for(int chain_id = 0; chain_id < num_chains; chain_id++){
         boost::random::mt19937 rng(seed);
         rng.discard(omp_get_thread_num()*num_steps);
 
-        Eigen::MatrixXd interim_states(initial_states[chain_id].size(),num_steps+1);
-        interim_states.col(0) = initial_states[chain_id];
+        Eigen::MatrixXd interim_states(initial_states.rows(),num_steps+1);
+        interim_states.col(0) = initial_states.col(chain_id);
         double proposal_accepted_cnt = 0.0;
         for(int i=0;i<num_steps;i++){
-            interim_states.col(i+1) = mh_step(rng, interim_states.col(i),&proposal_accepted_cnt, scale_factor_of_proposal);
+            interim_states.col(i+1) = mh_step(rng, interim_states.col(i),&proposal_accepted_cnt, covar_matrix);
         }
         final_states[chain_id] = interim_states;
         accepted_count[chain_id] = proposal_accepted_cnt;
     }
 
-    timer.step("Overall Stop");
-    Rcpp::NumericVector t(timer);
-    out[0] = final_states;
-    out[1] = accepted_count;
-    out[2] = timer;
-    return out;
+    auto stop = std::chrono::high_resolution_clock::now();
+    int duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
+
+    return std::make_tuple(final_states, accepted_count, duration);
 }

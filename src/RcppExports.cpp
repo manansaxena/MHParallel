@@ -12,24 +12,25 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // metro_interface
-List metro_interface(int num_chains, std::vector<Eigen::VectorXd> initial_states, int num_steps, int seed, int n_cores, double scale_factor_of_proposal);
-RcppExport SEXP _MHParallel_metro_interface(SEXP num_chainsSEXP, SEXP initial_statesSEXP, SEXP num_stepsSEXP, SEXP seedSEXP, SEXP n_coresSEXP, SEXP scale_factor_of_proposalSEXP) {
+Rcpp::List metro_interface(int num_chains, Eigen::MatrixXd initial_states, int num_steps, int seed, int n_cores, double scale_factor_of_proposal, Rcpp::Nullable<Eigen::MatrixXd> covar_object);
+RcppExport SEXP _MHParallel_metro_interface(SEXP num_chainsSEXP, SEXP initial_statesSEXP, SEXP num_stepsSEXP, SEXP seedSEXP, SEXP n_coresSEXP, SEXP scale_factor_of_proposalSEXP, SEXP covar_objectSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< int >::type num_chains(num_chainsSEXP);
-    Rcpp::traits::input_parameter< std::vector<Eigen::VectorXd> >::type initial_states(initial_statesSEXP);
+    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type initial_states(initial_statesSEXP);
     Rcpp::traits::input_parameter< int >::type num_steps(num_stepsSEXP);
     Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
     Rcpp::traits::input_parameter< int >::type n_cores(n_coresSEXP);
     Rcpp::traits::input_parameter< double >::type scale_factor_of_proposal(scale_factor_of_proposalSEXP);
-    rcpp_result_gen = Rcpp::wrap(metro_interface(num_chains, initial_states, num_steps, seed, n_cores, scale_factor_of_proposal));
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Eigen::MatrixXd> >::type covar_object(covar_objectSEXP);
+    rcpp_result_gen = Rcpp::wrap(metro_interface(num_chains, initial_states, num_steps, seed, n_cores, scale_factor_of_proposal, covar_object));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_MHParallel_metro_interface", (DL_FUNC) &_MHParallel_metro_interface, 6},
+    {"_MHParallel_metro_interface", (DL_FUNC) &_MHParallel_metro_interface, 7},
     {NULL, NULL, 0}
 };
 

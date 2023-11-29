@@ -3,16 +3,16 @@ library(Rcpp)
 library(RcppEigen)
 
 # Define the initial states, number of chains, number of steps, etc.
-num_chains <- 4  # Number of chains
+num_chains <- 10  # Number of chains
 num_steps <- 15000  # Number of steps per chain
 seed <- 1  # Seed for random number generation
 n_cores <- 4  # Number of cores for parallel processing
-
+scale_value_of_proposal = 0.1
 # Creating initial states for each chain
-initial_states <- lapply(1:num_chains, function(x) {
-  as.numeric(0)  # Assuming a 1-dimensional state
-})
-
+initial_states <- matrix(,nrow=1,ncol=num_chains)
+for(i in 1:num_chains){
+  initial_states[1,i] = 0
+}
 
 # initial_states <- lapply(1:num_chains, function(x) {
 #   numeric(3)  # 3-dimensional state initialized to zeros
@@ -24,7 +24,9 @@ results <- metro_interface(num_chains = num_chains,
                            num_steps = num_steps,
                            seed = seed,
                            n_cores = n_cores,
-                           scale_factor_of_proposal = 0.05)
+                           scale_factor_of_proposal = scale_value_of_proposal,
+                           covar_object = matrix(c(0.1))
+                           )
 
 # Extracting and analyzing the results
 final_states <- results$particles
