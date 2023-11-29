@@ -1,6 +1,7 @@
 #include "RcppEigen.h"
 #include "Rcpp.h"
 #include "mh_general.h"
+#include "target.h"
 
 //[[Rcpp::export]]
 Rcpp::List metro_interface(int num_chains,
@@ -18,10 +19,10 @@ Rcpp::List metro_interface(int num_chains,
                     Rcpp::stop("The covariance matrix should be a square matrix with size equal to the dimension of each state");
             }
         }
-        results = metropolis_hastings(num_chains, initial_states, num_steps, seed, n_cores, scale_factor_of_proposal, Rcpp::as<Eigen::MatrixXd>(covar_object));
+        results = metropolis_hastings(num_chains, initial_states, num_steps, seed, n_cores, target, scale_factor_of_proposal, Rcpp::as<Eigen::MatrixXd>(covar_object));
     }
     else {
-        results = metropolis_hastings(num_chains, initial_states, num_steps, seed, n_cores, scale_factor_of_proposal);
+        results = metropolis_hastings(num_chains, initial_states, num_steps, seed, n_cores, target, scale_factor_of_proposal);
     }
     
     

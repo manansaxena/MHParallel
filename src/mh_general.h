@@ -6,8 +6,9 @@
 #include <boost/random.hpp>
 #include <vector>
 #include <omp.h>
+#include <functional>
 
-#include "target.h"
+using targetFunction = std::function<double(const Eigen::VectorXd&)>;
 
 Eigen::VectorXd generate_proposal(Eigen::VectorXd current_state, Eigen::VectorXd random_vector){
     return current_state + random_vector;
@@ -32,7 +33,7 @@ Eigen::VectorXd generate_random_vector(RNG& rng, int dim, Eigen::MatrixXd covar)
 
 
 template<class RNG>
-Eigen::VectorXd mh_step(RNG& rng, Eigen::VectorXd current_state, double* proposal_accepted_cnt, Eigen::MatrixXd covar_matrix){
+Eigen::VectorXd mh_step(RNG& rng, Eigen::VectorXd current_state, double* proposal_accepted_cnt, Eigen::MatrixXd covar_matrix, targetFunction target){
     Eigen::VectorXd random_vector = generate_random_vector(rng, current_state.size(), covar_matrix);
     Eigen::VectorXd proposed_state = generate_proposal(current_state, random_vector);
 
@@ -54,6 +55,7 @@ std::tuple<std::vector<Eigen::MatrixXd>,Eigen::VectorXd,int> metropolis_hastings
                                 int num_steps,
                                 int seed,
                                 int n_cores,
+                                targetFunction target,
                                 double scale_factor_of_proposal = 1,
                                 Eigen::MatrixXd covar = Eigen::MatrixXd::Identity(1,1)
                                 )
@@ -88,7 +90,7 @@ std::tuple<std::vector<Eigen::MatrixXd>,Eigen::VectorXd,int> metropolis_hastings
         interim_states.col(0) = initial_states.col(chain_id);
         double proposal_accepted_cnt = 0.0;
         for(int i=0;i<num_steps;i++){
-            interim_states.col(i+1) = mh_step(rng, interim_states.col(i),&proposal_accepted_cnt, covar_matrix);
+            interim_states.col(i+1) = mh_step(rng, interim_states.col(i),&proposal_accepted_cnt, covar_matrix, target);
         }
         final_states[chain_id] = interim_states;
         accepted_count[chain_id] = proposal_accepted_cnt;

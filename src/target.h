@@ -1,7 +1,9 @@
 #include <boost/math/distributions/beta.hpp>
 #include <limits>
 
-double target(const Eigen::VectorXd& x, double alpha = 4, double beta = 2) {
+double target(const Eigen::VectorXd& x){
+    double alpha = 4; 
+    double beta = 2;
     using boost::math::beta_distribution;
 
     double result = 0.0;
@@ -15,6 +17,24 @@ double target(const Eigen::VectorXd& x, double alpha = 4, double beta = 2) {
     }
     return result;
 }
+
+
+
+
+// double target(const Eigen::VectorXd& x, double alpha = 4, double beta = 2) {
+//     using boost::math::beta_distribution;
+
+//     double result = 0.0;
+//     for (int i = 0; i < x.size(); ++i) {
+//         double xi = x(i);
+//         if (xi < 0 || xi > 1) {
+//             return -std::numeric_limits<double>::infinity();  // Return negative infinity if out of bounds
+//         }
+//         beta_distribution<double> dist(alpha, beta);
+//         result += log(boost::math::pdf(dist, xi));  // Accumulate log probability
+//     }
+//     return result;
+// }
 
 // #include <Eigen/Dense>
 // #include <cmath>
