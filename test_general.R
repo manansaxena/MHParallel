@@ -2,6 +2,7 @@ library(MHParallel)
 library(Rcpp)
 library(RcppEigen)
 
+
 # Define the initial states, number of chains, number of steps, etc.
 num_chains <- 10  # Number of chains
 num_steps <- 15000  # Number of steps per chain
@@ -19,7 +20,7 @@ for(i in 1:num_chains){
 # })
 
 # Call the metro_interface function
-results <- metro_interface(num_chains = num_chains,
+results_cpp <- metro_interface(num_chains = num_chains,
                            initial_states = initial_states,
                            num_steps = num_steps,
                            seed = seed,
@@ -29,13 +30,13 @@ results <- metro_interface(num_chains = num_chains,
                            )
 
 # Extracting and analyzing the results
-final_states <- results$particles
-timings <- results$timer
+final_states <- results_cpp$particles
+timings <- results_cpp$timer
 
 # Example of analyzing the results: print the first few steps of the first chain
 print(final_states[[1]][, 1:10])
 
-samples <- results[[1]][[3]]  # Assuming results is a list of matrices, one for each chain
+samples <- results_cpp[[1]][[3]]  # Assuming results is a list of matrices, one for each chain
 
 # Plot the histogram of the samples for the first chain
 hist(samples, probability = TRUE, breaks = 50, main = "Metropolis Samples", xlab = "Value")
@@ -47,4 +48,3 @@ beta <- 2   # Set the beta parameter for the Beta distribution
 curve(dbeta(x, alpha, beta), add = TRUE, col = "blue", lwd = 2)
 # Add a legend
 # legend("topright", legend = "True Beta Distribution", col = "blue", lwd = 2)
-# 
